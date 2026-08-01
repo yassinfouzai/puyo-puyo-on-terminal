@@ -158,22 +158,24 @@ bool Application::runConnectionSetup() {
     }
 }
 
-
 void Application::run()
 {
-    
     if (!runConnectionSetup()) return;
 
     werase(stdscr);
     refresh();
 
-
     srand(static_cast<unsigned>(time(nullptr)));
 
     Board board(6, 12, 1, 1);
+    Board opponentBoard(6, 12, 1, 29);
 
-    int spawnX = 3;
-    int spawnY = 0;
+    debugWin = newwin(10, 30, 1, 57);
+    scrollok(debugWin, TRUE);
+    box(debugWin, 0, 0);
+    wrefresh(debugWin);
+
+    int spawnX = 3, spawnY = 0;
 
     auto placePair = [&](const PuyoPair& p)
     {
@@ -191,25 +193,35 @@ void Application::run()
             && board.isValidPosition(p.secondX(), p.secondY());
     };
 
+    auto sendBoardState = [&]()
+    {
+        std::vector<uint8_t> buf(board.cellCount());
+        board.exportCells(buf.data());
+        net.sendBytes(buf.data(), buf.size());
+    };
+
     PuyoPair piece{ spawnX, spawnY, 2, randomColor(), randomColor() };
     placePair(piece);
     board.draw();
+    sendBoardState();
 
     timeout(50);
-
-
     using clock = std::chrono::steady_clock;
     auto lastDrop = clock::now();
     const auto dropInterval = std::chrono::milliseconds(600);
 
-
-    
     bool gameOver = false;
+    std::vector<uint8_t> incomingBuf(opponentBoard.cellCount());
 
     while (true)
     {
-        int key = getch();
+        if (net.pollBytes(incomingBuf.data(), incomingBuf.size()))
+        {
+            opponentBoard.importCells(incomingBuf.data());
+            opponentBoard.draw();
+        }
 
+        int key = getch();
 
         if (gameOver)
         {
@@ -217,7 +229,6 @@ void Application::run()
                 break;
             continue;
         }
-
 
         PuyoPair attempt = piece;
         bool tryMove = false;
@@ -265,35 +276,38 @@ void Application::run()
             piece = attempt;
             placePair(piece);
             board.draw();
+            sendBoardState();
         }
         else
         {
             placePair(piece);
+
             if (isGravityTick)
             {
                 board.applyGravity();
                 board.draw();
+                sendBoardState();
 
                 while (board.clearMatches())
                 {
                     board.applyGravity();
                     board.draw();
-                    napms(200); 
+                    sendBoardState();
+                    napms(200);
                 }
 
-                
                 if (!pairFits(PuyoPair{ spawnX, spawnY, 2, Puyo::RED, Puyo::RED }))
                 {
                     mvwprintw(debugWin, 8, 1, "GAME OVER - press q");
                     wrefresh(debugWin);
-                    gameOver = true;  
-                    continue;         
+                    gameOver = true;
+                    continue;
                 }
 
                 piece = PuyoPair{ spawnX, spawnY, 2, randomColor(), randomColor() };
                 placePair(piece);
-
                 board.draw();
+                sendBoardState();
             }
             else
             {

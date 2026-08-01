@@ -16,6 +16,61 @@ void Network::setNonBlocking(int fd)
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
+
+bool Network::sendBytes(const uint8_t* data, size_t count)
+{
+    if (!connected) return false;
+
+    size_t sent = 0;
+    while (sent < count)
+    {
+        ssize_t n = send(connFd, data + sent, count - sent, 0);
+        if (n <= 0)
+        {
+            connected = false;
+            return false;
+        }
+        sent += n;
+    }
+    return true;
+}
+
+bool Network::pollBytes(uint8_t* outData, size_t count)
+{
+    if (!connected) return false;
+
+    if (byteRecvBuf.size() != count)
+    {
+        byteRecvBuf.assign(count, 0);
+        byteRecvLen = 0;
+    }
+
+    while (byteRecvLen < count)
+    {
+        ssize_t n = recv(connFd, byteRecvBuf.data() + byteRecvLen, count - byteRecvLen, 0);
+        if (n > 0)
+        {
+            byteRecvLen += n;
+        }
+        else if (n == 0)
+        {
+            connected = false;
+            return false;
+        }
+        else
+        {
+            if (errno == EWOULDBLOCK || errno == EAGAIN)
+                return false;
+            connected = false;
+            return false;
+        }
+    }
+
+    memcpy(outData, byteRecvBuf.data(), count);
+    byteRecvLen = 0;
+    return true;
+}
+
 bool Network::hostGame(int port)
 {
     listenFd = socket(AF_INET, SOCK_STREAM, 0);

@@ -18,6 +18,11 @@ public:
     bool clearMatches();
     void applyGravity();
 
+    int cellCount() const { return cols * rows; }
+
+    void exportCells(uint8_t* out) const;
+    void importCells(const uint8_t* in);  
+
 private:
     static const int cellW = 4;
     static const int cellH = 2;

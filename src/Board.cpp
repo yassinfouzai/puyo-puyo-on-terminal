@@ -19,6 +19,22 @@ Board::Board(int cols, int rows, int originY, int originX)
     grid.resize(rows, std::vector<Puyo>(cols, Puyo::EMPTY));
 }
 
+void Board::exportCells(uint8_t* out) const
+{
+    int idx = 0;
+    for (int y = 0; y < rows; y++)
+        for (int x = 0; x < cols; x++)
+            out[idx++] = static_cast<uint8_t>(grid[y][x]);
+}
+
+void Board::importCells(const uint8_t* in)
+{
+    int idx = 0;
+    for (int y = 0; y < rows; y++)
+        for (int x = 0; x < cols; x++)
+            grid[y][x] = static_cast<Puyo>(in[idx++]);
+}
+
 void Board::drawCell(int x, int y)
 {
     Puyo p = grid[y][x];

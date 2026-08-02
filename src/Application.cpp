@@ -27,15 +27,22 @@ Application::Application()
 
     refresh(); 
     
-    debugWin = newwin(10, 30, 1, 29 + 26 + 2);
+    debugWin = newwin(10, 30, 1, 57);
     scrollok(debugWin, TRUE);
     box(debugWin, 0, 0);
     wrefresh(debugWin);
+
+    scoreWin = newwin(3, 30, 12, 57);
+    box(scoreWin,0,0);
+    mvwprintw(scoreWin, 1, 1, "score : 0");
+    wrefresh(scoreWin);
+
 }
 
 
 Application::~Application()
 {
+    delwin(scoreWin);
     delwin(debugWin);
     endwin();
 }
@@ -51,6 +58,34 @@ Puyo Application::randomColor()
         default: return Puyo::PURPLE;
     }
 }
+
+GameMode Application::chooseMode()
+{
+    while (true)
+    {
+        werase(stdscr);
+        mvprintw(2, 2, "PUYO PUYO");
+        mvprintw(4, 2, "1 - Single Player");
+        mvprintw(5, 2, "2 - Multiplayer");
+        mvprintw(6, 2, "q - Quit");
+        refresh();
+
+        timeout(-1);
+        int key = getch();
+
+        if (key == '1')
+            return GameMode::SINGLE_PLAYER;
+        if (key == '2')
+            return GameMode::MULTIPLAYER;
+        if (key == 'q')
+        {
+            endwin();
+            exit(0);
+        }
+    }
+}
+
+
 
 bool Application::runConnectionSetup() {
 
@@ -160,20 +195,36 @@ bool Application::runConnectionSetup() {
 
 void Application::run()
 {
-    if (!runConnectionSetup()) return;
+    int score = 0;
+
+    GameMode mode = chooseMode();
+    bool multiplayer = (mode == GameMode::MULTIPLAYER);
+
+    if (multiplayer)
+    {
+        if (!runConnectionSetup())
+            return;
+    }
 
     werase(stdscr);
     refresh();
 
+    touchwin(debugWin);
+    wrefresh(debugWin);
+    touchwin(scoreWin);
+    wrefresh(scoreWin);
+
     srand(static_cast<unsigned>(time(nullptr)));
 
     Board board(6, 12, 1, 1);
-    Board opponentBoard(6, 12, 1, 29);
 
-    debugWin = newwin(10, 30, 1, 57);
-    scrollok(debugWin, TRUE);
-    box(debugWin, 0, 0);
-    wrefresh(debugWin);
+    Board* opponentBoard = nullptr;
+    std::vector<uint8_t> incomingBuf;
+    if (multiplayer)
+    {
+        opponentBoard = new Board(6, 12, 1, 29);
+        incomingBuf.resize(opponentBoard->cellCount());
+    }
 
     int spawnX = 3, spawnY = 0;
 
@@ -192,9 +243,9 @@ void Application::run()
         return board.isValidPosition(p.pivotX, p.pivotY)
             && board.isValidPosition(p.secondX(), p.secondY());
     };
-
     auto sendBoardState = [&]()
     {
+        if (!multiplayer) return;
         std::vector<uint8_t> buf(board.cellCount());
         board.exportCells(buf.data());
         net.sendBytes(buf.data(), buf.size());
@@ -211,14 +262,13 @@ void Application::run()
     const auto dropInterval = std::chrono::milliseconds(600);
 
     bool gameOver = false;
-    std::vector<uint8_t> incomingBuf(opponentBoard.cellCount());
 
     while (true)
     {
-        if (net.pollBytes(incomingBuf.data(), incomingBuf.size()))
+        if (multiplayer && net.pollBytes(incomingBuf.data(), incomingBuf.size()))
         {
-            opponentBoard.importCells(incomingBuf.data());
-            opponentBoard.draw();
+            opponentBoard->importCells(incomingBuf.data());
+            opponentBoard->draw();
         }
 
         int key = getch();
@@ -288,13 +338,20 @@ void Application::run()
                 board.draw();
                 sendBoardState();
 
-                while (board.clearMatches())
+                int chainCount = 0;
+                int cellsCleared;
+                while ((cellsCleared = board.clearMatches()) > 0)
                 {
+                    chainCount++;
+                    score += 10 * cellsCleared * chainCount;
                     board.applyGravity();
                     board.draw();
                     sendBoardState();
                     napms(200);
                 }
+
+                mvwprintw(scoreWin, 1, 1, "score : %d   ", score);
+                wrefresh(scoreWin);
 
                 if (!pairFits(PuyoPair{ spawnX, spawnY, 2, Puyo::RED, Puyo::RED }))
                 {
@@ -315,4 +372,6 @@ void Application::run()
             }
         }
     }
+
+    delete opponentBoard;
 }

@@ -15,7 +15,7 @@ public:
     bool isValidPosition(int x, int y) const;
     void setCell(int x, int y, Puyo puyo);
     void draw();
-    bool clearMatches();
+    int clearMatches();
     void applyGravity();
 
     int cellCount() const { return cols * rows; }

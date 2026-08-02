@@ -56,10 +56,10 @@ void Board::drawCell(int x, int y)
         wattroff(win, COLOR_PAIR(pair));
 }
 
-bool Board::clearMatches()
+int Board::clearMatches()
 {
     std::vector<std::vector<bool>> visited(rows, std::vector<bool>(cols, false));
-    bool anyCleared = false;
+    int cellsCleared = 0;
 
     for (int y = 0; y < rows; y++)
     {
@@ -98,13 +98,13 @@ bool Board::clearMatches()
             {
                 for (auto& [gx, gy] : group)
                     grid[gy][gx] = Puyo::EMPTY;
-                anyCleared = true;
+                cellsCleared += group.size();
             }
         }
     }
-    return anyCleared;
-}
 
+    return cellsCleared;
+}
 void Board::applyGravity()
 {
     for (int x = 0; x < cols; x++)

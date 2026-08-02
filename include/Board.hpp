@@ -1,9 +1,11 @@
 #ifndef BOARD_HPP
 #define BOARD_HPP
 
+#include "Puyo.hpp"
+#include "Config.hpp"
 #include <ncurses.h>
 #include <vector>
-#include "Puyo.hpp"
+#include <cstdint>
 
 class Board
 {
@@ -15,13 +17,15 @@ public:
     bool isValidPosition(int x, int y) const;
     void setCell(int x, int y, Puyo puyo);
     void draw();
+
     int clearMatches();
     void applyGravity();
 
     int cellCount() const { return cols * rows; }
-
     void exportCells(uint8_t* out) const;
-    void importCells(const uint8_t* in);  
+    void importCells(const uint8_t* in);
+
+    void setColorMode(ColorMode mode) { colorMode = mode; }
 
 private:
     static const int cellW = 4;
@@ -30,8 +34,9 @@ private:
     int cols, rows;
     WINDOW* win;
     std::vector<std::vector<Puyo>> grid;
+    ColorMode colorMode = ColorMode::TERMINAL;
 
     void drawCell(int x, int y);
 };
 
-#endif // !BOARD_HPP
+#endif

@@ -1,0 +1,16 @@
+#ifndef CONFIG_HPP
+#define CONFIG_HPP
+
+#include <string>
+
+enum class ColorMode { TERMINAL, OFFICIAL };
+
+struct Config
+{
+    ColorMode colorMode = ColorMode::TERMINAL;
+
+    bool load(const std::string& path);
+    void save(const std::string& path) const;
+};
+
+#endif

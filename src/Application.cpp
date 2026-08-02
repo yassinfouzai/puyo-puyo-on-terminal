@@ -1,11 +1,12 @@
 #include "../include/Application.hpp"
 #include "../include/Board.hpp"
 
-#include <cstdio>
 #include <ncurses.h>
 #include <cstdlib>
 #include <ctime>
 #include <chrono>
+
+static const std::string CONFIG_PATH = "puyo.conf";
 
 Application::Application()
 {
@@ -18,25 +19,36 @@ Application::Application()
     if (has_colors())
     {
         start_color();
-        init_pair(1, COLOR_RED,    COLOR_RED);
-        init_pair(2, COLOR_BLUE,   COLOR_BLUE);
-        init_pair(3, COLOR_GREEN,  COLOR_GREEN);
-        init_pair(4, COLOR_YELLOW, COLOR_YELLOW);
-        //init_pair(5, COLOR_MAGENTA, COLOR_MAGENTA);
+
+        init_pair(1, COLOR_RED,     COLOR_RED);
+        init_pair(2, COLOR_BLUE,    COLOR_BLUE);
+        init_pair(3, COLOR_GREEN,   COLOR_GREEN);
+        init_pair(4, COLOR_YELLOW,  COLOR_YELLOW);
+        init_pair(5, COLOR_MAGENTA, COLOR_MAGENTA);
+
+        if (COLORS >= 256)
+        {
+            init_pair(11, 196, 196);
+            init_pair(12, 33,  33);
+            init_pair(13, 46,  46);
+            init_pair(14, 226, 226);
+            init_pair(15, 129, 129);
+        }
     }
 
-    refresh(); 
-    
+    config.load(CONFIG_PATH);
+
+    refresh();
+
     debugWin = newwin(10, 30, 1, 57);
     scrollok(debugWin, TRUE);
     box(debugWin, 0, 0);
     wrefresh(debugWin);
 
     scoreWin = newwin(3, 30, 12, 57);
-    box(scoreWin,0,0);
+    box(scoreWin, 0, 0);
     mvwprintw(scoreWin, 1, 1, "score : 0");
     wrefresh(scoreWin);
-
 }
 
 
@@ -49,7 +61,7 @@ Application::~Application()
 
 Puyo Application::randomColor()
 {
-    switch (rand() % 4)
+    switch (rand() % 5)
     {
         case 0: return Puyo::RED;
         case 1: return Puyo::BLUE;
@@ -64,10 +76,11 @@ GameMode Application::chooseMode()
     while (true)
     {
         werase(stdscr);
-        mvprintw(2, 2, "PUYO PUYO");
+        mvprintw(2, 2, "PUYO PUYO ON TERMINAL");
         mvprintw(4, 2, "1 - Single Player");
         mvprintw(5, 2, "2 - Multiplayer");
-        mvprintw(6, 2, "q - Quit");
+        mvprintw(6, 2, "o - Options");
+        mvprintw(7, 2, "q - Quit");
         refresh();
 
         timeout(-1);
@@ -77,6 +90,11 @@ GameMode Application::chooseMode()
             return GameMode::SINGLE_PLAYER;
         if (key == '2')
             return GameMode::MULTIPLAYER;
+        if (key == 'o')
+        {
+            runOptionsMenu();
+            continue;
+        }
         if (key == 'q')
         {
             endwin();
@@ -193,6 +211,34 @@ bool Application::runConnectionSetup() {
     }
 }
 
+void Application::runOptionsMenu()
+{
+    while (true)
+    {
+        werase(stdscr);
+        mvprintw(2, 2, "OPTIONS");
+        mvprintw(4, 2, "Color mode: %s",
+                  config.colorMode == ColorMode::OFFICIAL ? "Official Puyo colors" : "Terminal colors");
+        mvprintw(6, 2, "c - Toggle color mode");
+        mvprintw(7, 2, "b - Back");
+        refresh();
+
+        timeout(-1);
+        int key = getch();
+
+        if (key == 'c')
+        {
+            config.colorMode = (config.colorMode == ColorMode::TERMINAL)
+                                  ? ColorMode::OFFICIAL : ColorMode::TERMINAL;
+            config.save(CONFIG_PATH);
+        }
+        else if (key == 'b')
+        {
+            return;
+        }
+    }
+}
+
 void Application::run()
 {
     int score = 0;
@@ -217,12 +263,14 @@ void Application::run()
     srand(static_cast<unsigned>(time(nullptr)));
 
     Board board(6, 12, 1, 1);
+    board.setColorMode(config.colorMode);
 
     Board* opponentBoard = nullptr;
     std::vector<uint8_t> incomingBuf;
     if (multiplayer)
     {
         opponentBoard = new Board(6, 12, 1, 29);
+        opponentBoard->setColorMode(config.colorMode);
         incomingBuf.resize(opponentBoard->cellCount());
     }
 

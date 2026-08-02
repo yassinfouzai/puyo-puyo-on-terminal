@@ -1,5 +1,4 @@
 #include "../include/Board.hpp"
-
 #include <stdexcept>
 
 Board::~Board()
@@ -19,31 +18,15 @@ Board::Board(int cols, int rows, int originY, int originX)
     grid.resize(rows, std::vector<Puyo>(cols, Puyo::EMPTY));
 }
 
-void Board::exportCells(uint8_t* out) const
-{
-    int idx = 0;
-    for (int y = 0; y < rows; y++)
-        for (int x = 0; x < cols; x++)
-            out[idx++] = static_cast<uint8_t>(grid[y][x]);
-}
-
-void Board::importCells(const uint8_t* in)
-{
-    int idx = 0;
-    for (int y = 0; y < rows; y++)
-        for (int x = 0; x < cols; x++)
-            grid[y][x] = static_cast<Puyo>(in[idx++]);
-}
-
 void Board::drawCell(int x, int y)
 {
     Puyo p = grid[y][x];
-    int pair = toColorPair(p);
+    char c = toChar(p);
 
+    int pair = toColorPair(p, colorMode == ColorMode::OFFICIAL);
     if (pair != 0)
         wattron(win, COLOR_PAIR(pair));
 
-    char c = toChar(p);
     for (int dy = 0; dy < cellH; dy++)
     {
         for (int dx = 0; dx < cellW; dx++)
@@ -54,6 +37,40 @@ void Board::drawCell(int x, int y)
 
     if (pair != 0)
         wattroff(win, COLOR_PAIR(pair));
+}
+
+bool Board::isEmpty(int x, int y) const
+{
+    return grid[y][x] == Puyo::EMPTY;
+}
+
+bool Board::isValidPosition(int x, int y) const
+{
+    if (x < 0 || x >= cols || y < 0 || y >= rows)
+        return false;
+    return isEmpty(x, y);
+}
+
+void Board::setCell(int x, int y, Puyo puyo)
+{
+    if (x >= 0 && x < cols && y >= 0 && y < rows)
+    {
+        grid[y][x] = puyo;
+    }
+}
+
+void Board::draw()
+{
+    werase(win);
+    box(win, 0, 0);
+    for (int y = 0; y < rows; y++)
+    {
+        for (int x = 0; x < cols; x++)
+        {
+            drawCell(x, y);
+        }
+    }
+    wrefresh(win);
 }
 
 int Board::clearMatches()
@@ -102,9 +119,9 @@ int Board::clearMatches()
             }
         }
     }
-
     return cellsCleared;
 }
+
 void Board::applyGravity()
 {
     for (int x = 0; x < cols; x++)
@@ -123,41 +140,18 @@ void Board::applyGravity()
     }
 }
 
-
-bool Board::isEmpty(int x, int y) const
+void Board::exportCells(uint8_t* out) const
 {
-    return grid[y][x] == Puyo::EMPTY;
-}
-
-
-void Board::setCell(int x, int y, Puyo puyo)
-{
-    if (x >= 0 && x < cols &&
-        y >= 0 && y < rows)
-    {
-        grid[y][x] = puyo;
-    }
-}
-
-void Board::draw()
-{
-    werase(win);
-    box(win, 0, 0);
-
+    int idx = 0;
     for (int y = 0; y < rows; y++)
-    {
         for (int x = 0; x < cols; x++)
-        {
-            drawCell(x, y);
-        }
-    }
-
-    wrefresh(win);
+            out[idx++] = static_cast<uint8_t>(grid[y][x]);
 }
 
-bool Board::isValidPosition(int x, int y) const
+void Board::importCells(const uint8_t* in)
 {
-    if (x < 0 || x >= cols || y < 0 || y >= rows)
-        return false;
-    return isEmpty(x, y);
+    int idx = 0;
+    for (int y = 0; y < rows; y++)
+        for (int x = 0; x < cols; x++)
+            grid[y][x] = static_cast<Puyo>(in[idx++]);
 }

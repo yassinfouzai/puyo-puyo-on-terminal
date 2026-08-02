@@ -25,27 +25,40 @@ inline char toChar(Puyo puyo)
     }
 }
 
-inline int toColorPair(Puyo puyo)
+inline int toColorPair(Puyo puyo, bool useOfficial)
 {
-    switch (puyo)
+    if (useOfficial)
     {
-        case Puyo::RED:    return 1;
-        case Puyo::BLUE:   return 2;
-        case Puyo::GREEN:  return 3;
-        case Puyo::YELLOW: return 4;
-        case Puyo::PURPLE: return 5;
-        case Puyo::EMPTY:
-        default:           return 0;
+        switch (puyo)
+        {
+            case Puyo::RED:    return 11;
+            case Puyo::BLUE:   return 12;
+            case Puyo::GREEN:  return 13;
+            case Puyo::YELLOW: return 14;
+            case Puyo::PURPLE: return 15;
+            default:           return 0;
+        }
+    }
+    else
+    {
+        switch (puyo)
+        {
+            case Puyo::RED:    return 1;
+            case Puyo::BLUE:   return 2;
+            case Puyo::GREEN:  return 3;
+            case Puyo::YELLOW: return 4;
+            case Puyo::PURPLE: return 5;
+            default:           return 0;
+        }
     }
 }
-
 
 struct PuyoPair
 {
     int pivotX, pivotY;
     int rotation;
-    Puyo color1; 
-    Puyo color2; 
+    Puyo color1;
+    Puyo color2;
 
     int secondX() const
     {
@@ -68,4 +81,4 @@ struct PuyoPair
     }
 };
 
-#endif // PUYO_HPP
+#endif

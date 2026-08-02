@@ -1,14 +1,15 @@
-#ifndef APPLICATION
-#define APPLICATION
+#ifndef APPLICATION_HPP
+#define APPLICATION_HPP
 
-
-#include <ncurses.h>
-#include "Puyo.hpp"
 #include "Network.hpp"
+#include "Puyo.hpp"
+#include "Config.hpp"
+#include <ncurses.h>
 
 enum class GameMode { SINGLE_PLAYER, MULTIPLAYER };
 
-class Application {
+class Application
+{
 public:
     Application();
     ~Application();
@@ -18,10 +19,12 @@ private:
     WINDOW* debugWin;
     WINDOW* scoreWin;
     Network net;
+    Config config;
 
     GameMode chooseMode();
-    Puyo randomColor();
+    void runOptionsMenu();
     bool runConnectionSetup();
+    Puyo randomColor();
 };
 
-#endif // !APPLICATION
+#endif

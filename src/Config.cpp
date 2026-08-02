@@ -19,6 +19,8 @@ bool Config::load(const std::string& path)
 
         if (key == "color_mode")
             colorMode = (value == "official") ? ColorMode::OFFICIAL : ColorMode::TERMINAL;
+        else if (key == "high_score")
+            highScore = std::atoi(value.c_str());
     }
     return true;
 }
@@ -27,4 +29,5 @@ void Config::save(const std::string& path) const
 {
     std::ofstream out(path);
     out << "color_mode=" << (colorMode == ColorMode::OFFICIAL ? "official" : "terminal") << "\n";
+    out << "high_score=" << highScore << "\n";
 }

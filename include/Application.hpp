@@ -18,6 +18,7 @@ public:
 private:
     WINDOW* debugWin;
     WINDOW* scoreWin;
+    WINDOW* highWin;
     Network net;
     Config config;
 

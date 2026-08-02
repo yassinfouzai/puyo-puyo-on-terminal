@@ -40,15 +40,36 @@ Application::Application()
 
     refresh();
 
-    debugWin = newwin(10, 30, 1, 57);
-    scrollok(debugWin, TRUE);
+    debugWin = newwin(10, 30, 8, 57);
     box(debugWin, 0, 0);
+    mvwprintw(debugWin, 0, 2, " Controls ");
+
+    mvwprintw(debugWin, 2, 2, " [UP]   ");
+    mvwprintw(debugWin, 3, 2, " [DOWN] ");
+    mvwprintw(debugWin, 4, 2, " [LEFT] ");
+    mvwprintw(debugWin, 5, 2, " [RIGHT]");
+
+    mvwprintw(debugWin, 2, 11, "Rotate");
+    mvwprintw(debugWin, 3, 11, "Soft drop");
+    mvwprintw(debugWin, 4, 11, "Move left");
+    mvwprintw(debugWin, 5, 11, "Move right");
+
+    mvwprintw(debugWin, 7, 3, "[Q]");
+    mvwprintw(debugWin, 7, 11, "Quit");
+
     wrefresh(debugWin);
 
-    scoreWin = newwin(3, 30, 12, 57);
+    scoreWin = newwin(3, 30, 1, 57);
     box(scoreWin, 0, 0);
-    mvwprintw(scoreWin, 1, 1, "score : 0");
+    mvwprintw(scoreWin, 0, 2, "Score");
+    mvwprintw(scoreWin, 1, 3, "0");
     wrefresh(scoreWin);
+
+    highWin = newwin(3, 30, 4, 57);
+    box(highWin, 0, 0);
+    mvwprintw(highWin, 0, 2, "Highscore");
+    mvwprintw(highWin, 1, 3, "%d", config.highScore);
+    wrefresh(highWin);
 }
 
 
@@ -56,6 +77,7 @@ Application::~Application()
 {
     delwin(scoreWin);
     delwin(debugWin);
+    delwin(highWin);
     endwin();
 }
 
@@ -259,6 +281,8 @@ void Application::run()
     wrefresh(debugWin);
     touchwin(scoreWin);
     wrefresh(scoreWin);
+    touchwin(highWin);
+    wrefresh(highWin);
 
     srand(static_cast<unsigned>(time(nullptr)));
 
@@ -321,6 +345,26 @@ void Application::run()
 
         int key = getch();
 
+        if (key == KEY_RESIZE)
+        {
+            clearok(curscr, TRUE);
+            werase(stdscr);
+            refresh();
+
+            touchwin(debugWin);
+            wrefresh(debugWin);
+            touchwin(scoreWin);
+            wrefresh(scoreWin);
+            touchwin(highWin);
+            wrefresh(highWin);
+
+            board.draw();
+            if (multiplayer)
+                opponentBoard->draw();
+
+            continue;
+        }
+
         if (gameOver)
         {
             if (key == 'q' || key == '\n' || key == ' ')
@@ -343,11 +387,6 @@ void Application::run()
 
         if (key != ERR)
         {
-            wscrl(debugWin, 1);
-            box(debugWin, 0, 0);
-            mvwprintw(debugWin, 8, 1, "%-12s %4d", keyname(key), key);
-            wrefresh(debugWin);
-
             if (key == 'q')
                 break;
 
@@ -398,8 +437,17 @@ void Application::run()
                     napms(200);
                 }
 
-                mvwprintw(scoreWin, 1, 1, "score : %d   ", score);
+                mvwprintw(scoreWin, 0, 2, "score");
+                mvwprintw(scoreWin, 1, 3, "%d", score);
                 wrefresh(scoreWin);
+
+                if (score > config.highScore)
+                {
+                    config.highScore = score;
+                    config.save(CONFIG_PATH);
+                    mvwprintw(highWin, 1, 3, "%d   ", config.highScore);
+                    wrefresh(highWin);
+                }
 
                 if (!pairFits(PuyoPair{ spawnX, spawnY, 2, Puyo::RED, Puyo::RED }))
                 {

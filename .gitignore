@@ -1,0 +1,5 @@
+build/
+squashfs-root/
+PuyoPuyo-x86_64.AppImage
+PuyoPuyo.AppDir/
+error.log

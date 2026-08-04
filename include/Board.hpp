@@ -27,6 +27,10 @@ public:
 
     void setColorMode(ColorMode mode) { colorMode = mode; }
 
+    void reposition(int originY, int originX);
+    int windowWidth() const;
+    int windowHeight() const;
+
 private:
     static const int cellW = 4;
     static const int cellH = 2;

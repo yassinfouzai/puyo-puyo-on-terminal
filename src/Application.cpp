@@ -40,8 +40,27 @@ Application::Application()
 
     refresh();
 
+    cchar_t vert, horiz, c1, c2, c3, c4;
+    setcchar(&vert,  L"║", 0, 0, nullptr);
+    setcchar(&horiz, L"═", 0, 0, nullptr);
+
+    setcchar(&c1,  L"╔", 0, 0, nullptr);
+    setcchar(&c2,  L"╗", 0, 0, nullptr);
+    setcchar(&c3,  L"╚", 0, 0, nullptr);
+    setcchar(&c4,  L"╝", 0, 0, nullptr);
+
     debugWin = newwin(10, 30, 8, 57);
-    box(debugWin, 0, 0);
+    drawDebug(vert, horiz, c1, c2, c3, c4);
+
+    scoreWin = newwin(3, 30, 1, 57);
+    drawScore(vert, horiz, c1, c2, c3, c4, 0);
+
+    highWin = newwin(3, 30, 4, 57);
+    drawHighscore(vert, horiz, c1, c2, c3, c4);
+}
+
+void Application::drawDebug(cchar_t vert, cchar_t horiz, cchar_t c1, cchar_t c2, cchar_t c3, cchar_t c4) {
+    wborder_set(debugWin, &vert, &vert, &horiz, &horiz, &c1, &c2, &c3, &c4);
     mvwprintw(debugWin, 0, 2, " Controls ");
 
     mvwprintw(debugWin, 2, 2, " [UP]   ");
@@ -58,20 +77,22 @@ Application::Application()
     mvwprintw(debugWin, 7, 11, "Quit");
 
     wrefresh(debugWin);
+}
 
-    scoreWin = newwin(3, 30, 1, 57);
-    box(scoreWin, 0, 0);
+void Application::drawScore(cchar_t vert, cchar_t horiz, cchar_t c1, cchar_t c2, cchar_t c3, cchar_t c4, int currentScore) {
+    wborder_set(scoreWin, &vert, &vert, &horiz, &horiz, &c1, &c2, &c3, &c4);
     mvwprintw(scoreWin, 0, 2, "Score");
-    mvwprintw(scoreWin, 1, 3, "0");
+    mvwprintw(scoreWin, 1, 3, "%d", currentScore);
     wrefresh(scoreWin);
+}
 
-    highWin = newwin(3, 30, 4, 57);
-    box(highWin, 0, 0);
+
+void Application::drawHighscore(cchar_t vert, cchar_t horiz, cchar_t c1, cchar_t c2, cchar_t c3, cchar_t c4) {
+    wborder_set(highWin, &vert, &vert, &horiz, &horiz, &c1, &c2, &c3, &c4);
     mvwprintw(highWin, 0, 2, "Highscore");
     mvwprintw(highWin, 1, 3, "%d", config.highScore);
     wrefresh(highWin);
 }
-
 
 Application::~Application()
 {
@@ -124,8 +145,6 @@ GameMode Application::chooseMode()
         }
     }
 }
-
-
 
 bool Application::runConnectionSetup() {
 
@@ -261,6 +280,48 @@ void Application::runOptionsMenu()
     }
 }
 
+void Application::applyLayout(Board& board, Board* opponentBoard, bool multiplayer, int currentScore)
+{
+    cchar_t vert, horiz, c1, c2, c3, c4;
+    setcchar(&vert,  L"║", 0, 0, nullptr);
+    setcchar(&horiz, L"═", 0, 0, nullptr);
+
+    setcchar(&c1,  L"╔", 0, 0, nullptr);
+    setcchar(&c2,  L"╗", 0, 0, nullptr);
+    setcchar(&c3,  L"╚", 0, 0, nullptr);
+    setcchar(&c4,  L"╝", 0, 0, nullptr);
+
+
+
+    int marginY = static_cast<int>(LINES * 0.03);
+    int marginX = static_cast<int>(COLS  * 0.05);
+
+    int boardY = marginY;
+    int boardX = marginX;
+    board.reposition(boardY, boardX);
+
+    int nextX = boardX + board.windowWidth() + marginX;
+
+    if (multiplayer && opponentBoard)
+    {
+        opponentBoard->reposition(boardY, nextX);
+        nextX += opponentBoard->windowWidth() + marginX;
+    }
+
+    werase(scoreWin); wrefresh(scoreWin);
+    werase(highWin);  wrefresh(highWin);
+    werase(debugWin); wrefresh(debugWin);
+
+    mvwin(scoreWin, boardY,     nextX);
+    mvwin(highWin,  boardY + 3, nextX);
+    mvwin(debugWin, boardY + 7, nextX);
+
+    drawDebug(vert, horiz, c1, c2, c3, c4);
+    drawScore(vert, horiz, c1, c2, c3, c4, currentScore);
+    drawHighscore(vert, horiz, c1, c2, c3, c4);
+}
+
+
 void Application::run()
 {
     int score = 0;
@@ -273,6 +334,7 @@ void Application::run()
         if (!runConnectionSetup())
             return;
     }
+
 
     werase(stdscr);
     refresh();
@@ -297,6 +359,9 @@ void Application::run()
         opponentBoard->setColorMode(config.colorMode);
         incomingBuf.resize(opponentBoard->cellCount());
     }
+
+    applyLayout(board, opponentBoard, multiplayer, score); 
+
 
     int spawnX = 3, spawnY = 0;
 
@@ -351,12 +416,7 @@ void Application::run()
             werase(stdscr);
             refresh();
 
-            touchwin(debugWin);
-            wrefresh(debugWin);
-            touchwin(scoreWin);
-            wrefresh(scoreWin);
-            touchwin(highWin);
-            wrefresh(highWin);
+            applyLayout(board, opponentBoard, multiplayer, score);
 
             board.draw();
             if (multiplayer)
@@ -437,7 +497,7 @@ void Application::run()
                     napms(200);
                 }
 
-                mvwprintw(scoreWin, 0, 2, "score");
+                mvwprintw(scoreWin, 0, 2, "Score");
                 mvwprintw(scoreWin, 1, 3, "%d", score);
                 wrefresh(scoreWin);
 

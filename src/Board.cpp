@@ -18,6 +18,21 @@ Board::Board(int cols, int rows, int originY, int originX)
     grid.resize(rows, std::vector<Puyo>(cols, Puyo::EMPTY));
 }
 
+void Board::reposition(int originY, int originX)
+{
+    mvwin(win, originY, originX);
+}
+
+int Board::windowWidth() const
+{
+    return cols * cellW + 2;
+}
+
+int Board::windowHeight() const
+{
+    return rows * cellH + 2;
+}
+
 void Board::drawCell(int x, int y)
 {
     Puyo p = grid[y][x];
